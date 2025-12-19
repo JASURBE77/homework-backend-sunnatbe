@@ -28,4 +28,11 @@ const userSchema = new mongoose.Schema({
   recentSubmissions: { type: [submissionSchema], default: [] }
 });
 
+userSchema.index({
+  name: "text",
+  surname: "text",
+  login: "text",
+  group: "text",
+});
+
 module.exports = mongoose.model('HwUsers', userSchema);

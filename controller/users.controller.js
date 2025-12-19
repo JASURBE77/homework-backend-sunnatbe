@@ -108,6 +108,7 @@ exports.login = async (req, res) => {
     return res.status(200).json({
       message: "Login muvaffaqiyatli",
       accessToken,
+      role: user.role,
       refreshToken,
     });
 
@@ -147,34 +148,65 @@ exports.getMe = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    // 🔥 Admin tekshiruvi
+    // 🔐 ADMIN CHECK
     if (!req.user || req.user.role !== "admin") {
-      return res.status(403).json({ message: "Faqat admin olishi mumkin" });
+      return res.status(403).json({ message: "Forbidden" });
     }
 
-    let { page = 1, limit = 10 } = req.query;
-    page = parseInt(page);
-    limit = parseInt(limit);
+    let {
+      page = 1,
+      limit = 10,
+      search,
+      role,
+      level,
+      group
+    } = req.query;
 
-    const users = await User.find()
-      .select("-password")
-      .skip((page - 1) * limit)
-      .limit(limit);
+    page = Math.max(parseInt(page), 1);
+    limit = Math.min(parseInt(limit), 50);
 
-    const total = await User.countDocuments();
+    const skip = (page - 1) * limit;
+
+    // 🔍 FILTER OBJECT (SCALABLE)
+    const filter = {};
+
+    if (search) {
+      filter.$text = { $search: search };
+    }
+
+    if (role) filter.role = role;
+    if (level) filter.level = level;
+    if (group) filter.group = group;
+
+    // 🚀 PARALLEL QUERY (FAST)
+    const [users, total] = await Promise.all([
+      User.find(filter, { score: { $meta: "textScore" } })
+        .select("-password")
+        .sort(search ? { score: { $meta: "textScore" } } : { createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+
+      User.countDocuments(filter),
+    ]);
 
     res.status(200).json({
-      page,
-      totalPages: Math.ceil(total / limit),
-      total,
-      users
+      data: users,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
     });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("GET USERS ERROR:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// server/controllers/users.controller.js
+
+
 exports.getTopUsers = async (req, res) => {
   try {
     const users = await User.find().select("name wp").sort({ wp: -1 }).limit(5);

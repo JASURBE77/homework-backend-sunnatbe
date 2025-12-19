@@ -61,7 +61,79 @@
 
 <div id="output"></div>
 
+<hr>
+
+<h2>All Users (Admin only)</h2>
+
+<input type="text" id="searchUser" placeholder="Search (name, login, group)" />
+
+<select id="limit">
+  <option value="5">5</option>
+  <option value="10" selected>10</option>
+  <option value="20">20</option>
+</select>
+
+<button onclick="loadUsers()">Search</button>
+
+<div style="margin-top:10px;">
+  <button onclick="prevPage()">⬅ Prev</button>
+  <span id="pageInfo"></span>
+  <button onclick="nextPage()">Next ➡</button>
+</div>
+
 <script>
+  let page = 1;
+let totalPages = 1;
+
+/* ================= ALL USERS (PRO) ================= */
+async function loadUsers() {
+  if (!accessToken) return showOutput("Login qiling");
+
+  const search = document.getElementById("searchUser").value;
+  const limit = document.getElementById("limit").value;
+
+  const params = new URLSearchParams({
+    page,
+    limit,
+    search
+  });
+
+  try {
+    const res = await fetch(
+      "http://localhost:8080/?" + params.toString(),
+      {
+        headers: { Authorization: "Bearer " + accessToken }
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) return showOutput(data);
+
+    totalPages = data.pagination.pages;
+    document.getElementById("pageInfo").innerText =
+      `Page ${data.pagination.page} / ${totalPages}`;
+
+    showOutput(data.data);
+
+  } catch (err) {
+    showOutput("Get users error");
+  }
+}
+
+function nextPage() {
+  if (page < totalPages) {
+    page++;
+    loadUsers();
+  }
+}
+
+function prevPage() {
+  if (page > 1) {
+    page--;
+    loadUsers();
+  }
+}
 let accessToken = "";
 
 /* ================= HELPERS ================= */
