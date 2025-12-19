@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Homework Control</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    input, button, select {
+      margin: 5px 0;
+      display: block;
+      padding: 5px;
+      width: 250px;
+    }
+    button { cursor: pointer; }
+    #output {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+      padding: 10px;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Homework Control (Test Panel)</h1>
+
+<!-- LOGIN -->
+<h2>Login</h2>
+<input type="text" id="login" placeholder="Login" />
+<input type="password" id="password" placeholder="Password" />
+<button onclick="login()">Login</button>
+
+<hr>
+
+<!-- REGISTER -->
+<h2>Register</h2>
+<input type="text" id="reg_name" placeholder="Name" />
+<input type="text" id="reg_surname" placeholder="Surname" />
+<input type="text" id="reg_group" placeholder="Group" />
+<input type="number" id="reg_age" placeholder="Age" />
+<input type="text" id="reg_login" placeholder="Login" />
+<input type="password" id="reg_password" placeholder="Password" />
+<input type="text" id="reg_level" placeholder="Level" />
+
+<select id="reg_role">
+  <option value="student">Student</option>
+</select>
+
+<button onclick="register()">Register</button>
+
+<hr>
+
+<!-- ME INFO -->
+<h2>My Info</h2>
+<button onclick="getMe()">Get My Info</button>
+
+<!-- ALL USERS -->
+<h2>All Users (Admin only)</h2>
+<button onclick="getAllUsers()">Get All Users</button>
+
+<div id="output"></div>
+
+<script>
+let accessToken = "";
+
+/* ================= HELPERS ================= */
+function showOutput(data) {
+  document.getElementById("output").innerText =
+    typeof data === "string" ? data : JSON.stringify(data, null, 2);
+}
+
+/* ================= ROLE SELECT ================= */
+
+async function updateRoleOptions() {
+  const roleSelect = document.getElementById("reg_role");
+  
+  // default: faqat Student va disabled
+  roleSelect.innerHTML = '<option value="student">Student</option>';
+  roleSelect.disabled = true;
+
+  if (!accessToken) return;
+
+  try {
+    const res = await fetch("http://localhost:8080/me", {
+      headers: { Authorization: "Bearer " + accessToken }
+    });
+    if (!res.ok) return;
+
+    const user = await res.json();
+
+    // Agar user admin bo‘lsa select ochiladi
+    if (user.role === "admin") {
+      roleSelect.innerHTML = `
+        <option value="student">Student</option>
+        <option value="admin">Admin</option>
+      `;
+      roleSelect.disabled = false;
+    }
+  } catch (err) {
+    console.error("ROLE CHECK ERROR:", err);
+  }
+}
+
+async function login() {
+  try {
+    const res = await fetch("http://localhost:8080/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        login: document.getElementById("login").value,
+        password: document.getElementById("password").value
+      })
+    });
+
+    const data = await res.json();
+    showOutput(data);
+
+    if (res.ok && data.accessToken) {
+      accessToken = data.accessToken;
+      await updateRoleOptions();
+    }
+  } catch (err) {
+    showOutput("Login error");
+  }
+}
+
+/* ================= REGISTER ================= */
+async function register() {
+  const payload = {
+    name: document.getElementById("reg_name").value,
+    surname: document.getElementById("reg_surname").value,
+    group: document.getElementById("reg_group").value,
+    age: Number(document.getElementById("reg_age").value),
+    login: document.getElementById("reg_login").value,
+    password: document.getElementById("reg_password").value,
+    level: document.getElementById("reg_level").value,
+    role: document.getElementById("reg_role").value
+  };
+
+  try {
+    const res = await fetch("http://localhost:8080/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: accessToken ? "Bearer " + accessToken : ""
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    showOutput(data);
+  } catch (err) {
+    showOutput("Register error");
+  }
+}
+
+/* ================= ME ================= */
+async function getMe() {
+  if (!accessToken) return showOutput("Login qiling");
+  const res = await fetch("http://localhost:8080/me", {
+    headers: { Authorization: "Bearer " + accessToken }
+  });
+  showOutput(await res.json());
+}
+
+/* ================= ALL USERS ================= */
+async function getAllUsers() {
+  if (!accessToken) return showOutput("Login qiling");
+  const res = await fetch("http://localhost:8080/all", {
+    headers: { Authorization: "Bearer " + accessToken }
+  });
+  showOutput(await res.json());
+}
+</script>
+
+</body>
+</html>
