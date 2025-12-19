@@ -82,25 +82,25 @@
 </div>
 
 <script>
-  let page = 1;
 let totalPages = 1;
 
-/* ================= ALL USERS (PRO) ================= */
+let page = 0;
+
 async function loadUsers() {
   if (!accessToken) return showOutput("Login qiling");
 
   const search = document.getElementById("searchUser").value;
-  const limit = document.getElementById("limit").value;
+  const size = document.getElementById("limit").value;
 
   const params = new URLSearchParams({
     page,
-    limit,
+    size,
     search
   });
 
   try {
     const res = await fetch(
-      "http://localhost:8080/?" + params.toString(),
+      "http://localhost:8080/all?" + params.toString(),
       {
         headers: { Authorization: "Bearer " + accessToken }
       }
@@ -110,11 +110,7 @@ async function loadUsers() {
 
     if (!res.ok) return showOutput(data);
 
-    totalPages = data.pagination.pages;
-    document.getElementById("pageInfo").innerText =
-      `Page ${data.pagination.page} / ${totalPages}`;
-
-    showOutput(data.data);
+    showOutput(data); // 🔥 CHUNKI BACKEND FAQAT ARRAY QAYTARYAPTI
 
   } catch (err) {
     showOutput("Get users error");

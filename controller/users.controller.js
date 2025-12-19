@@ -148,60 +148,46 @@ exports.getMe = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    // 🔐 ADMIN CHECK
+    // 🔐 faqat admin
     if (!req.user || req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden" });
+      return res.status(403).json({ message: "Faqat admin olishi mumkin" });
     }
 
-    let {
-      page = 1,
-      limit = 10,
-      search,
-      role,
-      level,
-      group
-    } = req.query;
+    let { page = 0, size = 10, search } = req.query;
 
-    page = Math.max(parseInt(page), 1);
-    limit = Math.min(parseInt(limit), 50);
+    page = parseInt(page);
+    size = parseInt(size);
 
-    const skip = (page - 1) * limit;
+    if (page < 0) page = 0;
+    if (size <= 0) size = 10;
 
-    // 🔍 FILTER OBJECT (SCALABLE)
-    const filter = {};
+    const skip = page * size;
+
+    // 🔍 BACKEND SEARCH (HECH NARSA BUZILMAYDI)
+    let filter = {};
 
     if (search) {
-      filter.$text = { $search: search };
+      filter = {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { surname: { $regex: search, $options: "i" } },
+          { login: { $regex: search, $options: "i" } },
+          { group: { $regex: search, $options: "i" } },
+          { level: { $regex: search, $options: "i" } },
+        ],
+      };
     }
 
-    if (role) filter.role = role;
-    if (level) filter.level = level;
-    if (group) filter.group = group;
+    const users = await User.find(filter)
+      .select("-password")
+      .skip(skip)
+      .limit(size);
 
-    // 🚀 PARALLEL QUERY (FAST)
-    const [users, total] = await Promise.all([
-      User.find(filter, { score: { $meta: "textScore" } })
-        .select("-password")
-        .sort(search ? { score: { $meta: "textScore" } } : { createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-
-      User.countDocuments(filter),
-    ]);
-
-    res.status(200).json({
-      data: users,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-      },
-    });
+    // ❗ response OLDINGIDEK — FAQAT ARRAY
+    res.status(200).json(users);
 
   } catch (error) {
-    console.error("GET USERS ERROR:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -213,5 +199,75 @@ exports.getTopUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+
+exports.putUserOne = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 🔐 faqat admin yoki user o‘zi
+    if (req.user.role !== "admin" && req.user.id !== id) {
+      return res.status(403).json({
+        message: "Siz bu userni o‘zgartira olmaysiz"
+      });
+    }
+
+    const {
+      name,
+      surname,
+      group,
+      age,
+      avatar,
+      level,
+      password,
+      role
+    } = req.body;
+
+    // ❌ oddiy user role o‘zgartira olmaydi
+    if (role && req.user.role !== "admin") {
+      return res.status(403).json({
+        message: "Role o‘zgartirish faqat admin uchun"
+      });
+    }
+
+    const updateData = {};
+
+    if (name) updateData.name = name;
+    if (surname) updateData.surname = surname;
+    if (group) updateData.group = group;
+    if (age) updateData.age = age;
+    if (avatar) updateData.avatar = avatar;
+    if (level) updateData.level = level;
+
+    // 🔐 password bo‘lsa → hash
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // 🔥 admin bo‘lsa role ham o‘zgaradi
+    if (role && req.user.role === "admin") {
+      updateData.role = role;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User topilmadi" });
+    }
+
+    res.status(200).json({
+      message: "User muvaffaqiyatli yangilandi",
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error("PUT USER ERROR:", error);
+    res.status(500).json({ message: "Server xatosi" });
   }
 };

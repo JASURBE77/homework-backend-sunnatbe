@@ -19,6 +19,7 @@ const {
   getTopUsers,
   getAllUsers,
   getMe,
+  putUserOne,
   deleteUserOne
 } = require("../controller/users.controller");
 
@@ -30,7 +31,8 @@ router.post("/login", login);
 
 router.get("/me", auth, getMe);
 
-// 🔥 REAL PROJECT ENDPOINT
+router.put("/update/:id", auth, putUserOne);
+
 router.get("/all", auth, isAdmin, getAllUsers);
 
 router.delete("/:id", auth, isAdmin, deleteUserOne);
