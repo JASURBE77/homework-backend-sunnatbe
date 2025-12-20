@@ -20,7 +20,7 @@ exports.createUser = async (req, res) => {
       role
     } = req.body;
 
-    if (!name || !surname || !group || !age || !login || !password || !level) {
+    if (!name || !surname || !group || !age || !login || !password ) {
       return res.status(400).json({ message: "Hamma maydonlarni to‘ldiring" });
     }
 

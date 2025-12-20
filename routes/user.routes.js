@@ -35,7 +35,7 @@ router.put("/update/:id", auth, putUserOne);
 
 router.get("/all", auth, isAdmin, getAllUsers);
 
-router.delete("/:id", auth, isAdmin, deleteUserOne);
+router.delete("/delete/:id", auth, isAdmin, deleteUserOne);
 router.get("/top", getTopUsers);
 
 module.exports = router;

@@ -1,44 +1,3 @@
-// const User = require("../models/users.model");
-
-// exports.createSubmission = async (req, res) => {
-//   try {
-//     const { HwLink, description } = req.body;
-
-//  if (!HwLink || HwLink.trim() === "") {
-//   return res.status(400).json({ message: "Uy ishi linki kerak" });
-// }
-
-//     const user = await User.findById(req.user.id);
-
-//     if (!user) {
-//       return res.status(404).json({ message: "User topilmadi" });
-//     }
-
-//     const newSubmission = {
-//       HwLink,
-//       description,
-//       date: new Date().toISOString().slice(0, 10),
-//       status: "pending"
-//     };
-
-//     user.recentSubmissions.unshift(newSubmission);
-
-//     user.totalLessons += 1;
-//     user.pendingLessons += 1;
-
-//     await user.save();
-
-//     res.status(201).json({
-//       message: "Uy ishi yuborildi",
-//       submission: newSubmission
-//     });
-
-//   } catch (e) {
-//     res.status(500).json({ message: e.message });
-//   }
-// };
-
-
 
 const User = require("../models/users.model");
 
@@ -57,7 +16,9 @@ exports.createSubmission = async (req, res) => {
     user.pendingLessons += 1;
 
     await user.save();
-    res.status(201).json({ message: "Uy ishi yuborildi", submission: newSubmission });
+    res.status(201).json({ message: "Uy ishi yuborildi",
+      name: user.name,
+      submission: newSubmission });
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -108,3 +69,4 @@ exports.reviewSubmission = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
