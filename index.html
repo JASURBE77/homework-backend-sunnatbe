@@ -81,10 +81,77 @@
   <button onclick="nextPage()">Next ➡</button>
 </div>
 
+
+<hr>
+
+<h2>All Submissions (Admin only)</h2>
+
+<select id="adminStatusFilter">
+  <option value="">All</option>
+  <option value="PENDING">Pending</option>
+  <option value="CHECKED">Checked</option>
+</select>
+
+<button onclick="getAllSubmissions()">Get All Submissions</button>
+
+
+<hr>
+
+
+<h2>Get User Submissions</h2>
+<input type="text" id="userId" placeholder="User ID" />
+<select id="statusFilter">
+  <option value="">All</option>
+  <option value="PENDING">Pending</option>
+  <option value="CHECKED">Checked</option>
+</select>
+<button onclick="getUserSubmissions()">Get Submissions</button>
+<h2>Review Submission (Admin)</h2>
+
+<input type="text" id="reviewUserId" placeholder="User ID" />
+<input type="text" id="reviewSubmissionId" placeholder="Submission ID" />
+<input type="number" id="reviewScore" placeholder="Score (0-100)" />
+<input type="text" id="reviewDesc" placeholder="Teacher comment" />
+
+<select id="reviewStatus">
+  <option value="CHECKED">CHECKED</option>
+  <option value="PENDING">PENDING</option>
+</select>
+
+<button onclick="reviewSubmission()">Review</button>
+
 <script>
 let totalPages = 1;
 
 let page = 0;
+
+/* ================= ADMIN: ALL SUBMISSIONS ================= */
+async function getAllSubmissions() {
+  if (!accessToken) return showOutput("Login qiling");
+
+  const status = document.getElementById("adminStatusFilter").value;
+
+  try {
+    let url = "http://localhost:8080/submissions";
+    if (status) {
+      url += `?status=${status}`;
+    }
+
+    const res = await fetch(url, {
+      headers: {
+        Authorization: "Bearer " + accessToken
+      }
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) return showOutput(data);
+
+    showOutput(data);
+  } catch (err) {
+    showOutput("Get all submissions error");
+  }
+}
 
 async function loadUsers() {
   if (!accessToken) return showOutput("Login qiling");
@@ -157,7 +224,7 @@ async function updateRoleOptions() {
 
     const user = await res.json();
 
-    // Agar user admin bo‘lsa select ochiladi
+    // Agar user admin bo'lsa select ochiladi
     if (user.role === "admin") {
       roleSelect.innerHTML = `
         <option value="student">Student</option>
@@ -223,6 +290,33 @@ async function register() {
   }
 }
 
+// Barcha vazifalarni olish
+fetch(`/api/submissions/${userId}`, {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
+
+// Faqat PENDING vazifalarni olish
+fetch(`/api/submissions/${userId}?status=PENDING`, {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
+
+// Faqat CHECKED vazifalarni olish
+fetch(`/api/submissions/${userId}?status=CHECKED`, {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
+
 /* ================= ME ================= */
 async function getMe() {
   if (!accessToken) return showOutput("Login qiling");
@@ -239,6 +333,67 @@ async function getAllUsers() {
     headers: { Authorization: "Bearer " + accessToken }
   });
   showOutput(await res.json());
+}
+async function reviewSubmission() {
+  if (!accessToken) return showOutput("Login qiling (admin)");
+
+  const userId = document.getElementById("reviewUserId").value;
+  const submissionId = document.getElementById("reviewSubmissionId").value;
+
+  const payload = {
+    score: Number(document.getElementById("reviewScore").value),
+    teacherDescription: document.getElementById("reviewDesc").value,
+    status: document.getElementById("reviewStatus").value
+  };
+
+  if (!userId || !submissionId)
+    return showOutput("User ID va Submission ID kerak!");
+
+  try {
+    const res = await fetch(
+      `http://localhost:8080/submissions/${userId}/${submissionId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + accessToken
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const data = await res.json();
+    showOutput(data);
+  } catch (err) {
+    showOutput("Review error");
+  }
+}
+
+
+/* ================= GET USER SUBMISSIONS ================= */
+async function getUserSubmissions() {
+  if (!accessToken) return showOutput("Login qiling");
+  
+  const userId = document.getElementById("userId").value;
+  const status = document.getElementById("statusFilter").value;
+
+  if (!userId) return showOutput("User ID kiriting!");
+  
+  try {
+    let url = `http://localhost:8080/submissions/${userId}`;
+    if (status) {
+      url += `?status=${status}`;
+    }
+    
+    const res = await fetch(url, {
+      headers: { Authorization: "Bearer " + accessToken }
+    });
+    
+    const data = await res.json();
+    showOutput(data);
+  } catch (err) {
+    showOutput("Get submissions error");
+  }
 }
 </script>
 

@@ -5,7 +5,7 @@ const submissionSchema = new mongoose.Schema({
   description: { type: String },
   date: { type: String, required: true },
   status: { type: String, enum: ['PENDING', 'CHECKED'], default: 'PENDING' },
-  score: { type: Number, default: 0 },
+  rating: { type: Number, default: 0 },
   teacherDescription: { type: String, default: "" }
 });
 

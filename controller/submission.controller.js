@@ -1,7 +1,7 @@
 
 const User = require("../models/users.model");
 
-// CREATE SUBMISSION
+
 exports.createSubmission = async (req, res) => {
   try {
     const { HwLink, description } = req.body;
@@ -24,25 +24,20 @@ exports.createSubmission = async (req, res) => {
   }
 };
 
-// GET SUBMISSIONS BY USER
 exports.getUserSubmissions = async (req, res) => {
   try {
     const { userId } = req.params;
-    const { status } = req.query;
 
     const user = await User.findById(userId).select("recentSubmissions");
     if (!user) return res.status(404).json({ message: "User topilmadi" });
 
-    let submissions = user.recentSubmissions;
-    if (status) submissions = submissions.filter(s => s.status.toUpperCase() === status.toUpperCase());
-
-    res.status(200).json(submissions);
+    res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// REVIEW SUBMISSION (Admin)
+
 exports.reviewSubmission = async (req, res) => {
   try {
     const { userId, submissionId } = req.params;
@@ -69,4 +64,3 @@ exports.reviewSubmission = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
