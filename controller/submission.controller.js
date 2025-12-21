@@ -26,9 +26,19 @@ exports.createSubmission = async (req, res) => {
 
 exports.getUserSubmissions = async (req, res) => {
   try {
-    const { userId } = req.params;
+    let {page = 0, size = 10} = req.query;
 
-    const user = await User.findById(userId).select("recentSubmissions");
+    page = parseInt(page);
+    size = parseInt(size);  
+
+    if (page < 0) page = 0;
+    if (size <= 0) size = 10;
+
+    const skip = page * size;
+
+     const { userId } = req.params;
+
+    const user = await User.findById(userId).select("recentSubmissions").skip(skip).limit(size);
     if (!user) return res.status(404).json({ message: "User topilmadi" });
 
     res.status(200).json(user);

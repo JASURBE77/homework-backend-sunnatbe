@@ -162,8 +162,6 @@ exports.getAllUsers = async (req, res) => {
     if (size <= 0) size = 10;
 
     const skip = page * size;
-
-    // 🔍 BACKEND SEARCH (HECH NARSA BUZILMAYDI)
     let filter = {};
 
     if (search) {
