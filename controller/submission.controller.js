@@ -74,3 +74,15 @@ exports.reviewSubmission = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+exports.getUserMe_submission = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).select("recentSubmissions");
+    if (!user) return res.status(404).json({ message: "User topilmadi" });
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}

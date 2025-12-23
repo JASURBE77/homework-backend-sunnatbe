@@ -176,14 +176,22 @@ exports.getAllUsers = async (req, res) => {
       };
     }
 
+     const totalUsers = await  User.countDocuments(filter);
+
     const users = await User.find(filter)
-      .select("-password")
-      .select("-recentSubmissions")
+      .select("-password  -recentSubmissions")
       .skip(skip)
       .limit(size);
 
-    // ❗ response OLDINGIDEK — FAQAT ARRAY
-    res.status(200).json(users);
+       const totalPages = Math.ceil(totalProducts / size);
+
+    res.status(200).json({
+      page,
+      totalPages,
+      count: users.length,
+      totalUsers,
+      data:users
+    });
 
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -3,6 +3,7 @@ const {
   createSubmission,
   getUserSubmissions,
   reviewSubmission,
+  getAllSubmisssions,
 } = require("../controller/submission.controller");
 
 const auth = require("../middleware/auth.middleware");
