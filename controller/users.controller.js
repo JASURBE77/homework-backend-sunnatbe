@@ -155,11 +155,8 @@ exports.getAllUsers = async (req, res) => {
 
     let { page = 0, size = 10, search } = req.query;
 
-    page = parseInt(page);
-    size = parseInt(size);
-
-    if (page < 0) page = 0;
-    if (size <= 0) size = 10;
+    page = Math.max(0, parseInt(page) || 0);
+    size = Math.max(1, parseInt(size) || 10);
 
     const skip = page * size;
     let filter = {};
@@ -176,24 +173,26 @@ exports.getAllUsers = async (req, res) => {
       };
     }
 
-     const totalUsers = await  User.countDocuments(filter);
+    const totalUsers = await User.countDocuments(filter);
 
     const users = await User.find(filter)
-      .select("-password  -recentSubmissions")
+      .select("-password -recentSubmissions")
       .skip(skip)
       .limit(size);
 
-       const totalPages = Math.ceil(totalProducts / size);
+    const totalPages = Math.ceil(totalUsers / size);
 
     res.status(200).json({
       page,
+      size,
       totalPages,
-      count: users.length,
       totalUsers,
-      data:users
+      count: users.length,
+      data: users,
     });
 
   } catch (error) {
+    console.error("GET ALL USERS ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
