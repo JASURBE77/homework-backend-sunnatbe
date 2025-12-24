@@ -5,13 +5,12 @@ const app = express();
 const connectDB = require("./config/db");
 const submissionRoutes = require("./routes/submission.routes");
 const cookieParser = require("cookie-parser");
-
-
+const TypingRouter = require("./routes/typingrating.routes")
 connectDB();
 
 
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5500"], // frontend manzili
+  origin: ["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5500", "https://hwlink-psi.vercel.app"], // frontend manzili
   credentials: true
 }));
 
@@ -20,10 +19,11 @@ app.use(cookieParser());
 
 app.use("/", UserRoute)
 app.use("/", submissionRoutes);
+app.use("/", TypingRouter)
 
 const PORT =  8080;
 
-app.listen(PORT, () => {
+app.listen(PORT, () => {    
     console.log(`server ishga tushdi zor http://localhost:${PORT}`);
     
 })

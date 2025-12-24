@@ -16,7 +16,6 @@ const router = require("express").Router();
 const {
   createUser,
   login,
-  getTopUsers,
   getAllUsers,
   getMe,
   putUserOne,
@@ -36,6 +35,5 @@ router.put("/update/:id", auth, putUserOne);
 router.get("/all", auth, isAdmin, getAllUsers);
 
 router.delete("/delete/:id", auth, isAdmin, deleteUserOne);
-router.get("/top", getTopUsers);
 
 module.exports = router;

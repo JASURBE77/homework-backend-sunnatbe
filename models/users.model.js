@@ -4,11 +4,11 @@ const submissionSchema = new mongoose.Schema({
   HwLink: { type: String, required: true },
   description: { type: String },
   date: { type: String, required: true },
-  status: { type: String, enum: ['PENDING', 'CHECKED'], default: 'PENDING' },
-  rating: { type: Number, default: 0 },
+  status: { type: String, enum: ['PENDING', 'CHECKED', 'AGAIN CHECKED'], default: 'PENDING' },
+  score: { type: Number, default: 0 },
   teacherDescription: { type: String, default: "" }
 });
-
+  
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   surname: { type: String, required: true },
