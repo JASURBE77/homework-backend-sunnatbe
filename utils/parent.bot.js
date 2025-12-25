@@ -3,7 +3,7 @@ require("dotenv").config();
 const TelegramBot = require("node-telegram-bot-api");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
-const HwUsers = require("../models/users.model.js"); // sizning user modeli
+const HwUsers = require("../models/users.model.js"); // user modeli
 
 // -------------------- MongoDB ga ulanish --------------------
 mongoose
@@ -11,11 +11,27 @@ mongoose
   .then(() => console.log("MongoDB ulandi"))
   .catch((err) => console.log(err));
 
-// -------------------- Telegram Bot --------------------
-const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: true });
+// -------------------- Telegram Bot (webhook) --------------------
+const bot = new TelegramBot(process.env.BOT_TOKEN);
+const WEBHOOK_URL = process.env.WEBHOOK_URL; // Render URL masalan: https://your-app.onrender.com
+const PORT = process.env.PORT || 3000;
 
-// -------------------- Foydalanuvchi sessiyalari (memory) --------------------
+// Bot webhookni sozlash
+bot.setWebHook(`${WEBHOOK_URL}/bot${process.env.BOT_TOKEN}`);
+
+// -------------------- Foydalanuvchi sessiyalari --------------------
 const sessions = {}; // { chatId: { step: 'awaitLogin'|'awaitPassword'|'authenticated', login, user } }
+
+// -------------------- Webhook endpoint --------------------
+const express = require("express");
+const app = express();
+app.use(express.json());
+
+// Telegram xabarlarini qabul qiladigan endpoint
+app.post(`/bot${process.env.BOT_TOKEN}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
 
 // -------------------- /start komandasi --------------------
 bot.onText(/\/start/, (msg) => {
@@ -43,7 +59,7 @@ bot.on("message", async (msg) => {
       if (!user) {
         bot.sendMessage(
           chatId,
-          "Login topilmadi. Iltimos /start bilan qayta urinib ko‘ring."
+          "Login topilmadi. /start bilan qayta urinib ko‘ring."
         );
         delete sessions[chatId];
         return;
@@ -59,7 +75,6 @@ bot.on("message", async (msg) => {
         return;
       }
 
-      // login va parol to'g'ri → chatId saqlash
       user.chatId = chatId;
       await user.save();
 
@@ -75,6 +90,13 @@ bot.on("message", async (msg) => {
     );
     delete sessions[chatId];
   }
+});
+
+// -------------------- Serverni ishga tushurish --------------------
+app.listen(PORT, () => {
+  console.log(
+    `Server ${PORT} portda ishlayapti, Telegram webhook URL: ${WEBHOOK_URL}/bot${process.env.BOT_TOKEN}`
+  );
 });
 
 // -------------------- Bot instance export --------------------
