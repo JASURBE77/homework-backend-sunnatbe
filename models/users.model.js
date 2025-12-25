@@ -10,6 +10,10 @@ const submissionSchema = new mongoose.Schema({
     enum: ["PENDING", "CHECKED", "AGAIN CHECKED"],
     default: "PENDING",
   },
+  checkedBy: {
+    type: String,
+    ref: "HwUsers", // yoki Teacher modeli bo‘lsa o‘sha
+  },
   score: { type: Number, default: 0 },
   teacherDescription: { type: String, default: "" },
 });
