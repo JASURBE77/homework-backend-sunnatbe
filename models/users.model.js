@@ -35,6 +35,7 @@ const userSchema = new mongoose.Schema({
   level: { type: String, required: true },
   joinDate: { type: Date, default: Date.now },
   recentSubmissions: { type: [submissionSchema], default: [] },
+  chatId: Number
 });
 
 userSchema.index({

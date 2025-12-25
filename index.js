@@ -8,6 +8,8 @@ const cookieParser = require("cookie-parser");
 const TypingRouter = require("./routes/typingrating.routes")
 connectDB();
 
+require("./utils/parent.bot.js");
+
 app.use(cors());
 
 app.use(express.json());
