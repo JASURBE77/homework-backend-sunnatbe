@@ -1,4 +1,5 @@
 const User = require("../models/users.model");
+const mongoose = require("mongoose");
 
 const { sendTelegramNotification } = require("../utils/telegram");
 
@@ -36,29 +37,66 @@ exports.createSubmission = async (req, res) => {
     res.status(500).json({ message: e.message });
   }
 };
+
 exports.getUserSubmissions = async (req, res) => {
   try {
-    let { page = 0, size = 10 } = req.query;
-
-    page = parseInt(page);
-    size = parseInt(size);
-
-    if (page < 0) page = 0;
-    if (size <= 0) size = 10;
-
-    const skip = page * size;
-
     const { userId } = req.params;
+    const { status, page = 1, size = 10 } = req.query;
 
-    const user = await User.findById(userId)
-      .select("recentSubmissions")
-      .skip(skip)
-      .limit(size);
-    if (!user) return res.status(404).json({ message: "User topilmadi" });
+    const pageNum = Math.max(Number(page) || 1, 1);
+    const pageSize = Math.max(Number(size) || 10, 1);
 
-    res.status(200).json(user);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    // 🔍 User filter
+    const matchUserStage = {
+      $match: { _id: new mongoose.Types.ObjectId(userId) },
+    };
+
+    // 🔍 Status filter
+    const matchSubmissionStage = status
+      ? { $match: { "recentSubmissions.status": status } }
+      : null;
+
+    const pipeline = [
+      matchUserStage,
+      { $unwind: "$recentSubmissions" },
+      ...(matchSubmissionStage ? [matchSubmissionStage] : []),
+      {
+        $project: {
+          _id: 0,
+          userId: "$_id",
+          name: 1,
+          surname: 1,
+          submission: "$recentSubmissions",
+        },
+      },
+      { $sort: { "submission.date": -1 } },
+      { $skip: (pageNum - 1) * pageSize },
+      { $limit: pageSize },
+    ];
+
+    const data = await User.aggregate(pipeline);
+
+    // 🔢 TOTAL COUNT
+    const countPipeline = [
+      matchUserStage,
+      { $unwind: "$recentSubmissions" },
+      ...(matchSubmissionStage ? [matchSubmissionStage] : []),
+      { $count: "totalTasks" },
+    ];
+
+    const countResult = await User.aggregate(countPipeline);
+    const totalTasks = countResult[0]?.totalTasks || 0;
+
+    res.json({
+      userId,
+      page: pageNum,
+      size: pageSize,
+      totalTasks,
+      totalPages: Math.ceil(totalTasks / pageSize),
+      data,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
@@ -67,47 +105,48 @@ exports.reviewSubmission = async (req, res) => {
     const { submissionId } = req.params;
     const { score, teacherDescription } = req.body;
 
-    // 🔍 submissionId qaysi userda bo‘lsa — o‘shani topadi
-    const user = await User.findOne({
-      "recentSubmissions._id": submissionId,
-    });
+    const teacherName = `${req.user.name} ${req.user.surname}`;
+    console.log(req.user)
 
-    if (!user) {
-      return res.status(404).json({
-        message: "Submission topilmadi",
-      });
-    }
+    const user = await User.findOne({ "recentSubmissions._id": submissionId });
+    if (!user) return res.status(404).json({ message: "Submission topilmadi" });
 
-    const submission = user.recentSubmissions.find(
-      (s) => s._id.toString() === submissionId
-    );
+    const submission = user.recentSubmissions.id(submissionId);
+    const today = new Date().toISOString();
 
-    const today = new Date().toISOString().slice(0, 10);
-
-    // 🔁 STATUS LOGIC
     if (submission.status === "PENDING") {
       submission.status = "CHECKED";
       submission.checkedDate = today;
+      submission.checkedBy = teacherName;
 
       user.completedLessons += 1;
       user.pendingLessons -= 1;
     } else if (submission.status === "CHECKED") {
       submission.status = "AGAIN CHECKED";
       submission.checkedDate = today;
+      submission.checkedBy = teacherName;
     } else {
-      return res.status(400).json({
-        message: "Bu uy ishi allaqachon qayta tekshirilgan",
-      });
+      return res
+        .status(400)
+        .json({ message: "Bu uy ishi allaqachon qayta tekshirilgan" });
     }
 
     if (score !== undefined) submission.score = score;
-    if (teacherDescription) submission.teacherDescription = teacherDescription;
+    if (typeof teacherDescription === "string")
+      submission.teacherDescription = teacherDescription;
 
     await user.save();
 
     res.status(200).json({
       message: "Submission muvaffaqiyatli tekshirildi",
-      submission,
+      submission: {
+        _id: submission._id,
+        status: submission.status,
+        score: submission.score,
+        teacherDescription: submission.teacherDescription,
+        checkedDate: submission.checkedDate,
+        checkedBy: submission.checkedBy,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

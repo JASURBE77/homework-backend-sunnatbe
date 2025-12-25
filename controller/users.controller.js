@@ -2,25 +2,15 @@ const User = require("../models/users.model");
 const bcrypt = require("bcryptjs");
 const {
   generateAccessToken,
-  generateRefreshToken
+  generateRefreshToken,
 } = require("../middleware/token");
-
 
 exports.createUser = async (req, res) => {
   try {
-    const {
-      name,
-      surname,
-      group,
-      age,
-      avatar,
-      login,
-      password,
-      level,
-      role
-    } = req.body;
+    const { name, surname, group, age, avatar, login, password, level, role } =
+      req.body;
 
-    if (!name || !surname || !group || !age || !login || !password ) {
+    if (!name || !surname || !group || !age || !login || !password) {
       return res.status(400).json({ message: "Hamma maydonlarni to‘ldiring" });
     }
 
@@ -59,7 +49,7 @@ exports.createUser = async (req, res) => {
       login,
       password: hashedPassword,
       level,
-      role: finalRole
+      role: finalRole,
     });
 
     await newUser.save();
@@ -72,15 +62,12 @@ exports.createUser = async (req, res) => {
       role: finalRole,
       accessToken,
       refreshToken,
-      newUser
+      newUser,
     });
-
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
 };
-
-
 
 exports.login = async (req, res) => {
   try {
@@ -91,7 +78,7 @@ exports.login = async (req, res) => {
     }
 
     const user = await User.findOne({ login }).select(
-      "_id login password role"
+      "_id login password role name surname"
     );
 
     if (!user) {
@@ -112,9 +99,6 @@ exports.login = async (req, res) => {
       role: user.role,
       refreshToken,
     });
-
-    
-
   } catch (error) {
     console.error("LOGIN ERROR:", error);
     return res.status(500).json({ message: "Server xatosi" });
@@ -123,24 +107,23 @@ exports.login = async (req, res) => {
 
 exports.deleteUserOne = async (req, res) => {
   try {
-    const {id} = req.params;
-  await User.findByIdAndDelete(id);
-    res.status(200).json({message: "User o'chirildi"});
+    const { id } = req.params;
+    await User.findByIdAndDelete(id);
+    res.status(200).json({ message: "User o'chirildi" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password")
+    const user = await User.findById(req.user._id).select("-password");
 
     if (!user) {
       return res.status(404).json({ message: "User topilmadi" });
     }
 
     return res.status(200).json(user);
-
   } catch (error) {
     console.error("GET ME ERROR:", error);
     return res.status(500).json({ message: "Server xatosi" });
@@ -191,15 +174,11 @@ exports.getAllUsers = async (req, res) => {
       count: users.length,
       data: users,
     });
-
   } catch (error) {
     console.error("GET ALL USERS ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
-
-
-
 
 exports.putUserOne = async (req, res) => {
   try {
@@ -208,25 +187,17 @@ exports.putUserOne = async (req, res) => {
     // 🔐 faqat admin yoki user o‘zi
     if (req.user.role !== "admin" && req.user.id !== id) {
       return res.status(403).json({
-        message: "Siz bu userni o‘zgartira olmaysiz"
+        message: "Siz bu userni o‘zgartira olmaysiz",
       });
     }
 
-    const {
-      name,
-      surname,
-      group,
-      age,
-      avatar,
-      level,
-      password,
-      role
-    } = req.body;
+    const { name, surname, group, age, avatar, level, password, role } =
+      req.body;
 
     // ❌ oddiy user role o‘zgartira olmaydi
     if (role && req.user.role !== "admin") {
       return res.status(403).json({
-        message: "Role o‘zgartirish faqat admin uchun"
+        message: "Role o‘zgartirish faqat admin uchun",
       });
     }
 
@@ -249,11 +220,9 @@ exports.putUserOne = async (req, res) => {
       updateData.role = role;
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    ).select("-password");
+    const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+    }).select("-password");
 
     if (!updatedUser) {
       return res.status(404).json({ message: "User topilmadi" });
@@ -261,9 +230,8 @@ exports.putUserOne = async (req, res) => {
 
     res.status(200).json({
       message: "User muvaffaqiyatli yangilandi",
-      user: updatedUser
+      user: updatedUser,
     });
-
   } catch (error) {
     console.error("PUT USER ERROR:", error);
     res.status(500).json({ message: "Server xatosi" });
