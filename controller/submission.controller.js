@@ -1,5 +1,6 @@
 const User = require("../models/users.model");
 const mongoose = require("mongoose");
+const bot = require("../utils/parent.bot.js")
 
 const { sendTelegramNotification } = require("../utils/telegram");
 
@@ -106,7 +107,6 @@ exports.reviewSubmission = async (req, res) => {
     const { score, teacherDescription } = req.body;
 
     const teacherName = `${req.user.name} ${req.user.surname}`;
-    console.log(req.user)
 
     const user = await User.findOne({ "recentSubmissions._id": submissionId });
     if (!user) return res.status(404).json({ message: "Submission topilmadi" });
@@ -114,31 +114,58 @@ exports.reviewSubmission = async (req, res) => {
     const submission = user.recentSubmissions.id(submissionId);
     const today = new Date().toISOString();
 
+    // Statusni yangilash
     if (submission.status === "PENDING") {
       submission.status = "CHECKED";
       submission.checkedDate = today;
       submission.checkedBy = teacherName;
 
       user.completedLessons += 1;
-      user.pendingLessons -= 1;
+      user.pendingLessons = Math.max(0, user.pendingLessons - 1);
     } else if (submission.status === "CHECKED") {
       submission.status = "AGAIN CHECKED";
       submission.checkedDate = today;
       submission.checkedBy = teacherName;
     } else {
-      return res
-        .status(400)
-        .json({ message: "Bu uy ishi allaqachon qayta tekshirilgan" });
+      return res.status(400).json({ message: "Bu uy ishi allaqachon qayta tekshirilgan" });
     }
 
+    // Score update
     if (score !== undefined) submission.score = score;
-    if (typeof teacherDescription === "string")
+
+    // Tavsif avtomatik generatsiya
+    let autoDescription;
+    if (!teacherDescription || teacherDescription.trim() === "") {
+      if (submission.score < 25) {
+        autoDescription = `O'glingiz topshirgan uy vazifa natijasi: ${submission.score}. Balli past, o'qishini kuchaytirishi kerak. Tekshirgan ustoz: ${teacherName}.`;
+      } else {
+        autoDescription = `O'glingiz uy vazifasini yaxshi bajardi! Ball: ${submission.score}. Davom etsin. Tekshirgan ustoz: ${teacherName}.`;
+      }
+      submission.teacherDescription = autoDescription;
+    } else {
       submission.teacherDescription = teacherDescription;
+    }
 
     await user.save();
 
+    // Telegramga xabar yuborish
+    const message = submission.teacherDescription;
+
+    // Userga yuborish
+    if (user.chatId) {
+      bot.sendMessage(user.chatId, message);
+      console.log("UY ISHI YUBORLD")
+    }
+
+    // Ota/onaga yuborish
+    if (user.parentChatIds && user.parentChatIds.length > 0) {
+      user.parentChatIds.forEach(chatId => {
+        bot.sendMessage(chatId, message);
+      });
+    }
+
     res.status(200).json({
-      message: "Submission muvaffaqiyatli tekshirildi",
+      message: "Submission muvaffaqiyatli tekshirildi va Telegramga yuborildi",
       submission: {
         _id: submission._id,
         status: submission.status,
@@ -148,10 +175,12 @@ exports.reviewSubmission = async (req, res) => {
         checkedBy: submission.checkedBy,
       },
     });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 exports.getUserMe_submission = async (req, res) => {
   try {
